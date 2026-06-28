@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodKraft Sales Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --saffron:#E8590C;--saffron-light:#FFF3ED;--green:#2D6A4F;--green-light:#EBF5F0;
+  --dark:#1A1A2E;--mid:#4A4A6A;--muted:#8888AA;--border:#E8E8F0;--surface:#FAFAFA;
+  --shadow:0 2px 12px rgba(26,26,46,.08);--shadow-lg:0 8px 32px rgba(26,26,46,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#F4F4FA;color:var(--dark);min-height:100vh;}
+header{background:linear-gradient(135deg,#E8590C,#C1440E);color:white;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(232,89,12,.3);position:sticky;top:0;z-index:100;}
+.logo{font-size:18px;font-weight:700;}
+.logo span{opacity:.7;font-weight:400;font-size:13px;margin-left:8px;}
+.hdate{font-size:12px;opacity:.85;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;}
+.tabs{background:white;border-bottom:1px solid var(--border);display:flex;padding:0 16px;gap:2px;overflow-x:auto;}
+.tab{padding:12px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+.tab:hover{color:var(--saffron);}
+.tab.active{color:var(--saffron);border-bottom-color:var(--saffron);font-weight:600;}
+main{max-width:1300px;margin:0 auto;padding:16px 12px;}
+.card{background:white;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.card-head{background:var(--saffron-light);border-bottom:1px solid #FFD5BF;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-head h2{font-size:14px;font-weight:700;color:var(--saffron);}
+.card-body{padding:16px 18px;}
+.sel-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;}
+.fg input,.fg select{height:40px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:13px;color:var(--dark);background:var(--surface);outline:none;transition:border-color .2s;}
+.fg input:focus,.fg select:focus{border-color:var(--saffron);background:white;}
+.btn{height:40px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0 16px;transition:all .2s;}
+.btn-primary{background:var(--saffron);color:white;}
+.btn-primary:hover{background:#C1440E;transform:translateY(-1px);}
+.btn-green{background:var(--green);color:white;}
+.btn-green:hover{background:#245A40;transform:translateY(-1px);}
+.btn-outline{background:white;color:var(--mid);border:1.5px solid var(--border);}
+.btn-outline:hover{border-color:var(--saffron);color:var(--saffron);}
+.btn-danger{background:#FFF0F0;color:#C0392B;border:1.5px solid #FFCDD2;}
+.btn-danger:hover{background:#FFCDD2;}
+.btn-sm{height:32px;font-size:12px;padding:0 12px;border-radius:7px;}
+
+/* ENTRY TABLE */
+.etw{overflow-x:auto;margin-top:12px;}
+.etable{border-collapse:collapse;width:100%;min-width:1050px;}
+.etable thead{background:var(--dark);}
+.etable thead th{padding:9px 8px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);text-align:center;white-space:nowrap;}
+.etable thead th.left{text-align:left;}
+.etable tbody tr{border-bottom:1px solid var(--border);}
+.etable tbody tr:hover{background:#FFFAF7;}
+.etable td{padding:4px 5px;vertical-align:middle;text-align:center;}
+.etable td.left{text-align:left;}
+.row-sel{width:100%;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 6px;font-size:12px;outline:none;background:white;}
+.row-sel:focus{border-color:var(--saffron);}
+.row-inp{width:100%;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 6px;font-size:12px;text-align:right;outline:none;background:white;}
+.row-inp:focus{border-color:var(--saffron);}
+.row-inp.has-val{background:#FFF8F5;border-color:#FFB898;}
+.row-txt{width:100%;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 6px;font-size:12px;outline:none;background:white;display:none;}
+.row-txt:focus{border-color:var(--saffron);}
+.row-disp{font-size:13px;font-weight:700;padding:2px 4px;}
+.row-disp.amt{color:var(--saffron);}
+.row-disp.cls{color:var(--green);}
+.del-row-btn{background:none;border:none;color:#CCC;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:5px;transition:all .2s;}
+.del-row-btn:hover{background:#FFE5E5;color:#C0392B;}
+.cat-badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:600;}
+.cb-meal{background:#D1ECF1;color:#0C5460;}
+.cb-bakery{background:#FFF3CD;color:#856404;}
+.cb-sweet{background:#FADBD8;color:#922B21;}
+.cb-mrp{background:#E2D9F3;color:#4A235A;}
+.cb-bev{background:#D4EDDA;color:#155724;}
+.custom-link{font-size:10px;color:var(--saffron);cursor:pointer;display:block;margin-top:1px;text-decoration:underline;}
+
+.totals-bar{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;padding:12px 16px;background:var(--dark);border-radius:10px;}
+.tbox{flex:1;min-width:100px;text-align:center;}
+.tbox .tl{font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.tbox .tv{font-size:17px;font-weight:700;color:white;}
+.tbox.g .tv{color:#6FCBA0;}
+.tbox.b .tv{color:#85C1E9;}
+.tbox.y .tv{color:#F9E79F;}
+.tbox.r .tv{color:#F1948A;}
+
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;}
+.dc{background:white;border-radius:10px;padding:14px;box-shadow:var(--shadow);border-left:4px solid var(--saffron);}
+.dc.g{border-left-color:var(--green);}
+.dc.b{border-left-color:#3498DB;}
+.dc.p{border-left-color:#8E44AD;}
+.dc.r{border-left-color:#E74C3C;}
+.dc .dl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.dc .dv{font-size:18px;font-weight:700;}
+.dc .ds{font-size:10px;color:var(--muted);margin-top:1px;}
+.tcard{background:white;border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+.tbar{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.tbar h3{font-size:14px;font-weight:700;}
+.tbar-r{display:flex;gap:7px;flex-wrap:wrap;}
+.fi{height:34px;border:1.5px solid var(--border);border-radius:7px;padding:0 10px;font-size:12px;outline:none;width:135px;}
+.fi:focus{border-color:var(--saffron);}
+.rec-wrap{overflow-x:auto;}
+.rtable{width:100%;border-collapse:collapse;min-width:950px;}
+.rtable thead{background:var(--dark);}
+.rtable thead th{padding:9px 10px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);text-align:left;white-space:nowrap;}
+.rtable tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+.rtable tbody tr:hover{background:var(--saffron-light);}
+.rtable td{padding:8px 10px;font-size:12px;white-space:nowrap;}
+.dbtn{background:none;border:none;color:#CCC;cursor:pointer;padding:2px 6px;border-radius:5px;font-size:13px;transition:all .2s;}
+.dbtn:hover{background:#FFE5E5;color:#C0392B;}
+.empty-st{padding:40px;text-align:center;color:var(--muted);}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.sc{background:white;border-radius:10px;box-shadow:var(--shadow);padding:16px;border-top:4px solid var(--saffron);}
+.sc h3{font-size:13px;font-weight:700;margin-bottom:10px;}
+.sr{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.sr:last-child{border-bottom:none;font-weight:700;color:var(--saffron);}
+.sr .si{color:var(--mid);}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:white;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);transition:transform .3s;z-index:999;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}
+.toast.err{background:#C0392B;}
+@media(max-width:640px){.sel-row{flex-direction:column;}main{padding:10px 8px;}}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#E8590C,#C1440E);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:white;border-radius:20px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.login-box h1{font-size:22px;font-weight:800;color:var(--dark);margin-bottom:4px;}
+.login-box p{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.login-box .fg{margin-bottom:14px;}
+.login-box .fg label{font-size:12px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;}
+.login-box .fg input,.login-box .fg select{width:100%;height:44px;border:1.5px solid var(--border);border-radius:9px;padding:0 14px;font-size:14px;outline:none;background:var(--surface);}
+.login-box .fg input:focus,.login-box .fg select:focus{border-color:var(--saffron);}
+.login-btn{width:100%;height:46px;background:linear-gradient(135deg,#E8590C,#C1440E);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;transition:transform .2s;}
+.login-btn:hover{transform:translateY(-1px);}
+.login-err{color:#C0392B;font-size:12px;margin-top:8px;text-align:center;display:none;}
+.user-pill{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px;display:flex;align-items:center;gap:8px;}
+.logout-btn{background:rgba(255,255,255,.25);border:none;color:white;font-size:11px;padding:2px 8px;border-radius:10px;cursor:pointer;font-weight:600;}
+.logout-btn:hover{background:rgba(255,255,255,.4);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>🍽️ FoodKraft</h1>
+    <p>Sales Manager — Please login to continue</p>
+    <div class="fg">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" autocomplete="off"
+        onkeydown="if(event.key==='Enter') document.getElementById('login-pass').focus()">
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">🔐 Login</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+<header>
+  <div class="logo">🍽️ FoodKraft <span>Sales Manager</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="hdate" id="hdate"></div>
+    <div class="user-pill">
+      <span id="header-user">—</span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('entry')">➕ New Entry</div>
+  <div class="tab" onclick="showTab('records')">📋 Records</div>
+  <div class="tab" onclick="showTab('summary')">📊 Summary</div>
+</div>
+<main>
+
+<!-- TAB 1 -->
+<div id="tab-entry">
+  <div class="card">
+    <div class="card-head"><h2>📅 Date, Counter & Shift Select Karo</h2></div>
+    <div class="card-body">
+      <div class="sel-row">
+        <div class="fg"><label>Date</label><input type="date" id="sel-date" style="min-width:155px;"></div>
+        <div class="fg" id="counter-fg">
+          <label>Counter (Client)</label>
+          <select id="sel-counter" style="min-width:200px;"><option value="">— Select Counter —</option></select>
+          <div style="display:flex;gap:6px;margin-top:6px;" id="add-counter-row">
+            <input type="text" id="new-counter-inp" placeholder="Naya counter naam type karo..." 
+              style="flex:1;height:34px;border:1.5px solid #8E44AD;border-radius:7px;padding:0 10px;font-size:12px;outline:none;">
+            <button onclick="addNewCounter()" 
+              style="height:34px;padding:0 12px;background:#8E44AD;color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">
+              ✅ Add
+            </button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Shift</label>
+          <select id="sel-shift" style="min-width:130px;">
+            <option value="">— Select Shift —</option>
+            <option>Breakfast</option><option>Lunch</option><option>Snacks</option><option>Dinner</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="startEntry()">📋 Start Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="entry-section" style="display:none;">
+    <div class="card">
+      <div class="card-head">
+        <h2 id="entry-title">Sale Entry Table</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="addRow()">➕ Add Row</button>
+          <button class="btn btn-outline btn-sm" onclick="clearRows()">🔄 Reset</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-bottom:8px;">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Dropdown se item select karo ya <u>Custom</u> link se type karo. Rate bharo (ya blank rakhna). Qty bharo → Amount & Closing automatic.</p>
+        <div class="etw">
+          <table class="etable">
+            <thead>
+              <tr>
+                <th style="width:28px;">#</th>
+                <th class="left" style="width:90px;">Category</th>
+                <th class="left" style="min-width:190px;">Item Name</th>
+                <th style="width:75px;">Rate (₹)</th>
+                <th style="width:70px;">Stock</th>
+                <th style="width:70px;">Qty</th>
+                <th style="width:90px;">Amount (₹)</th>
+                <th style="width:78px;">Cash (₹)</th>
+                <th style="width:78px;">Online (₹)</th>
+                <th style="width:78px;">Card (₹)</th>
+                <th style="width:70px;">Closing</th>
+                <th style="width:28px;"></th>
+              </tr>
+            </thead>
+            <tbody id="entry-tbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-outline btn-sm" onclick="addRow()" style="width:100%;border-style:dashed;">➕ Add New Row</button>
+        </div>
+        <div class="totals-bar">
+          <div class="tbox"><div class="tl">Total Amount</div><div class="tv" id="t-amt">₹0</div></div>
+          <div class="tbox g"><div class="tl">Total Qty</div><div class="tv" id="t-qty">0</div></div>
+          <div class="tbox y"><div class="tl">Total Cash</div><div class="tv" id="t-cash">₹0</div></div>
+          <div class="tbox b"><div class="tl">Total Online</div><div class="tv" id="t-online">₹0</div></div>
+          <div class="tbox r"><div class="tl">Total Card</div><div class="tv" id="t-card">₹0</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn btn-outline" onclick="clearRows()">🔄 Reset All</button>
+          <button class="btn btn-green" onclick="saveAll()" style="flex:1;justify-content:center;font-size:14px;">✅ Save All Entries</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div id="tab-records" style="display:none;">
+  <div class="dash-grid" id="dashCards"></div>
+  <div class="tcard">
+    <div class="tbar">
+      <h3>📋 All Sales Records</h3>
+      <div class="tbar-r">
+        <input class="fi" id="fText" placeholder="🔍 Search..." oninput="renderRec()">
+        <select class="fi" id="fCounter" onchange="renderRec()" style="width:160px;"><option value="">All Counters</option></select>
+        <select class="fi" id="fDate" onchange="renderRec()" style="width:130px;"><option value="">All Dates</option></select>
+        <button class="btn btn-green btn-sm" onclick="exportExcel()">⬇️ Excel</button>
+        <button class="btn btn-danger btn-sm" id="clear-all-btn" onclick="clearAll()">🗑️ Clear</button>
+      </div>
+    </div>
+    <div class="rec-wrap">
+      <table class="rtable">
+        <thead>
+          <tr><th>#</th><th>Date</th><th>Counter</th><th>Shift</th><th>Category</th>
+          <th>Item</th><th>Stock</th><th>Qty</th><th>Rate</th>
+          <th>Amount (₹)</th><th>Cash (₹)</th><th>Online (₹)</th><th>Card (₹)</th><th>Closing</th><th></th></tr>
+        </thead>
+        <tbody id="recBody"></tbody>
+      </table>
+      <div class="empty-st" id="recEmpty" style="display:none;">📭 No records yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3 -->
+<div id="tab-summary" style="display:none;">
+  <div class="dash-grid" id="sumDash"></div>
+  <div class="sg" id="sumGrid"></div>
+</div>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// COUNTER-WISE ITEMS & RATES (from your Excel sheets)
+// ══════════════════════════════════════════════════
+const COUNTER_ITEMS = {
+  'Dainik Bhaskar': {
+    'Meal': {
+      'Full Thali':100,'Mini Thali':80,'Kadi Rice':60,'Maggi':30,
+      'Butter Milk':15,'Lemon Water':30,'Sandwich':40,'Sandwitch':40,
+      'Paratha':35,'Water Bottle':20,'Coke':20,'Noodles':50,
+      'Sabji Rice Extra':30,'Extra Veg':10,'Paneer Rice':60,'Combo Thali':60
+    },
+    'MRP Item': {
+      'Biscuit':10,'Chips':10,'Chocolate':10,'Coke':20,'Dairy Milk':20,'Chips 35':35
+    }
+  },
+  'Deloitte': {
+    'MRP Item': {
+      'Kitkat':10,'Munch':10,'5 Star Chocolate':10,
+      'Biscuit 10':10,'Biscuit 15':15,'Biscuit 20':20,'Biscuit 25':25,'Biscuit 30':30,
+      'Chips 10':10,'Chips 20':20,'Chips 35':35,
+      'Cold Drink 10':10,'Cold Drink 20':20,'Cold Drink 40':40
+    }
+  },
+  'Global Indian International School': {
+    'Bakery': {
+      'Pastry':70,'Brownie':60,'Cake':100,'Cream Roll':70,'Donut':60,'Muffin':45,'Banana Cake':180
+    },
+    'Meal': {
+      'Noodles':75,'Pasta':75,'Dry Idli':60,'Samosa':20,'Veg Momos':50,'Paneer Momos':70
+    },
+    'Beverage': {
+      'Cold Coffee':80,'Oreo Shake':80,'Badam Milk':70,'Lassi':70,'Nimbu Pani':30
+    }
+  },
+  'Times Of India': {
+    'Meal': {
+      'Veg Thali':90,'Regular Thali':70,'Extra':10,
+      'Roti/Rice Combo':70,'Egg Combo':75,'Chinese Combo':75,'Veg Biryani':80,
+      'Aloo Pyaz Paratha':30,'Mix Paratha':35,'Paneer Paratha':45,'Egg Bhurji Paratha':65,
+      'Masala Dosa':70,'Mysore Masala Dosa':80,'Paneer Dosa':80,'Plain Dosa':60,'Onion Masala Dosa':80,
+      'Idli 2 Pc':60,'Medu Vada':80,'Onion Uttapam':70,'Mix Uttapam':80,'Set Dosa':80,
+      'Lassi':70,'Egg Roll':70,'Paneer Kathi Roll':70,'Veg Kathi Roll':70,
+      'Veg Momos':50,'Paneer Momos':70,'VegRoll':60,'Veg Roll':60,
+      'Plain Omelette 2 Egg':30,'Masala Omelette 2 Egg':50,'Egg Biryani':60,
+      'Extra Veg':10,'Three Beans Salad':60,'Paneer Roll':70
+    },
+    'Bakery': {
+      'Chocolate Pastry':60,'Brownie Pastry':60,'Cup Cake':70,'Donut':50,
+      'Cream Roll':35,'Vanilla Pastry':60,'Banana Cake':180
+    },
+    'Sweet': {
+      'Gulab Jamun':20,'Motichoor Ladoo':20,'Rasmalai':35,
+      'Sponge Rasgulla':20,'Imarti':40
+    }
+  },
+  'Sector 63': {
+    'Meal': {
+      'Samosa':12.5,'Pasta':30,'Idli Sambhar':40,'Masala Idli':40,
+      'All Thali':50,'Paneer Thali':70,'Combo Thali':40,
+      'Raita':10,'Extra Veg':10,'Pav Bhaji':40,'Chana Chaat':30,
+      'Aloo Bonda':10,'Upma':30,'Poha':30,'Chhole Kulche':40,
+      'Aloo Kachodi':40,'Bread Pakoda':20,'Noodles':30
+    }
+  },
+  'Sector 65': {
+    'Meal': {
+      'Samosa':25,'Pasta':30,'Noodles':30,'Pav Bhaji':50,
+      'Chhole Kulche':40,'Chhole Bhature':40,
+      'Combo Thali':40,'Full Thali':50,'Paneer Thali':60,'Chaap Thali':70,
+      'Extra Veg':10,'Sprout':30,'Idli Sambhar':40,'Fried Idli':40,
+      'Aloo Kachodi':40,'Chana Chaat':30,'Aloo Bonda':10
+    }
+  },
+  'Jindal': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'Nucleus': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'Amazon': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'Maruti': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'Tele Performance': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'EXL-1': {
+    'Meal': {'Full Thali':80,'Mini Thali':70,'Combo Thali':60,'Biryani':60,'Gulab Jamun':20,'Halwa':20,'Kheer':20}
+  }
+};
+
+// All items pool (for dropdown when counter not in list)
+const ALL_ITEMS = {
+  'Meal':['Full Thali','Mini Thali','Veg Thali','Regular Thali','All Thali','Combo Thali','Paneer Thali',
+    'Chaap Thali','Egg Thali','Biryani Thali','Packed Thali','Roti/Rice Combo','Egg Combo','Chinese Combo',
+    'Non-Veg Combo','Non-Veg Thali','Biryani','Egg Biryani','Paneer Biryani','Veg Biryani',
+    'Noodles','Pasta','Maggi','Masala Dosa','Onion Masala Dosa','Mysore Masala Dosa','Paneer Dosa',
+    'Plain Dosa','Butter Masala Dosa','Idli Sambhar','Dry Idli','Masala Idli','Fried Idli','Idli 2 Pc',
+    'Medu Vada','Set Dosa','Onion Uttapam','Mix Uttapam','Aloo Pyaz Paratha','Mix Paratha','Paneer Paratha',
+    'Egg Bhurji Paratha','Paratha','Pav Bhaji','Chhole Kulche','Chhole Bhature','Poha','Upma','Samosa',
+    'Aloo Bonda','Aloo Kachodi','Bread Pakoda','Chana Chaat','Sprout','Sandwich','Veg Sandwich',
+    'Paneer Sandwich','Egg Roll','Paneer Kathi Roll','Veg Kathi Roll','Veg Roll','VegRoll',
+    'Veg Momos','Paneer Momos','Rajma Rice','Kadi Rice','Curd Rice','Kadhi Rice',
+    'Dal Rice Extra','Sabji Rice Extra','Extra Veg','Raita','Extra','Paneer Rice',
+    'Lassi','Salt Lassi','Sweet Lassi','Lemon Water','Butter Milk','Water Bottle','Coke',
+    'Plain Omelette 2 Egg','Masala Omelette 2 Egg','Three Beans Salad',
+    'Gulab Jamun','Kheer','Halwa','Rasmalai'],
+  'Bakery':['Brownie','Brownie Pastry','Chocolate Pastry','Vanilla Pastry','Pastry',
+    'Cream Roll','Cup Cake','Muffin','Cake','Donut','Banana Cake'],
+  'Sweet':['Gulab Jamun','Imarti','Motichoor Ladoo','Rasmalai','Sponge Rasgulla','Kheer','Halwa'],
+  'MRP Item':['Kitkat','Munch','5 Star Chocolate','Dairy Milk','Biscuit','Biscuit 10','Biscuit 15',
+    'Biscuit 20','Biscuit 25','Biscuit 30','Chips','Chips 10','Chips 20','Chips 35',
+    'Cold Drink 10','Cold Drink 20','Cold Drink 40','Coke','Chocolate'],
+  'Beverage':['Cold Coffee','Oreo Shake','Badam Milk','Badam Shake','Lassi','Salt Lassi',
+    'Sweet Lassi','Nimbu Pani','Butter Milk','Lemon Water']
+};
+
+const CAT_COLOR={'Meal':'cb-meal','Bakery':'cb-bakery','Sweet':'cb-sweet','MRP Item':'cb-mrp','Beverage':'cb-bev'};
+
+// ── GOOGLE SHEETS SYNC ──
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwdu7RMN8ihyVZoLQtOFhSbBijPj_gQ9KIpNJhtCaSVZU-WVeor4dIHYf1dZWnGVil_og/exec';
+
+async function saveToSheets(entriesToSave){
+  try {
+    await fetch(SHEETS_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'save', entries: entriesToSave})
+    });
+    showToast('✅ Google Sheets mein save ho gaya!','ok');
+  } catch(e) {
+    showToast('⚠️ Sheets sync failed, local mein saved hai','err');
+  }
+}
+
+async function loadFromSheets(){
+  try {
+    showToast('📥 Data load ho raha hai...','ok');
+    const res = await fetch(SHEETS_URL);
+    const json = await res.json();
+    if(json.status==='success' && json.data && json.data.length > 1){
+      const rows = json.data.slice(1);
+      const loaded = rows.filter(r=>r[0]).map(r=>({
+        date:String(r[0]), counter:String(r[1]), shift:String(r[2]),
+        item:String(r[3]), cat:String(r[4]), rate:Number(r[5]),
+        qty:Number(r[6]), amount:Number(r[7]),
+        cash:Number(r[8]||0), online:Number(r[9]||0), card:Number(r[10]||0),
+        ts:String(r[11]||'')
+      }));
+      if(loaded.length > 0){
+        entries = loaded;
+        localStorage.setItem('fk_entries', JSON.stringify(entries));
+        renderRecords(); renderSummary();
+        showToast('✅ '+ loaded.length +' records sync ho gaye!','ok');
+      } else {
+        showToast('📋 Sheets mein abhi koi data nahi','ok');
+      }
+    }
+  } catch(e) {
+    showToast('⚠️ Load failed, local data use ho raha hai','err');
+  }
+}
+
+
+// ── USER CREDENTIALS ──
+// username → { counter, password }
+// counter = '__admin__' means full access
+const USERS = {
+  'anjali':         { counter:'__admin__',          password:'foodkraft@admin' },
+  'sec63':          { counter:'Sector 63',           password:'sec63@fk' },
+  'sec65':          { counter:'Sector 65',           password:'sec65@fk' },
+  'jindal':         { counter:'Jindal',              password:'jindal@fk' },
+  'dainik':         { counter:'Dainik Bhaskar',      password:'db@fk' },
+  'deloitte':       { counter:'Deloitte',            password:'del@fk' },
+  'toi':            { counter:'Times Of India',      password:'toi@fk' },
+  'nucleus':        { counter:'Nucleus',             password:'nucleus@fk' },
+  'amazon':         { counter:'Amazon',              password:'amazon@fk' },
+  'maruti':         { counter:'Maruti',              password:'maruti@fk' },
+  'tp1':            { counter:'Tele Performance',    password:'tp1@fk' },
+  'tp2':            { counter:'Tele Performance 2',  password:'tp2@fk' },
+  'giis':           { counter:'Global Indian International School', password:'giis@fk' },
+  'exl1':           { counter:'EXL-1',              password:'exl1@fk' },
+};
+
+let entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
+let rowCount = 0;
+let currentCounter = '';
+let loggedInUser = ''; // '__admin__' or counter name
+let isAdmin = false;
+
+// ── LOGIN ──
+function doLogin(){
+  const username = (document.getElementById('login-user').value||'').trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+
+  if(!username){ errEl.textContent='❌ Username daalo!'; errEl.style.display='block'; return; }
+  if(!pass){ errEl.textContent='❌ Password daalo!'; errEl.style.display='block'; return; }
+
+  const user = USERS[username];
+  if(!user || pass !== user.password){
+    errEl.textContent='❌ Wrong username ya password!';
+    errEl.style.display='block';
+    document.getElementById('login-pass').value='';
+    return;
+  }
+
+  // Login success
+  loggedInUser = user.counter;
+  isAdmin = (user.counter === '__admin__');
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('header-user').textContent = isAdmin ? '👑 Admin' : ('🏪 ' + user.counter);
+  errEl.style.display='none';
+
+  if(!isAdmin){
+    // Salesperson: counter lock karo, add counter option hide karo
+    const counterSel = document.getElementById('sel-counter');
+    counterSel.value = user.counter;
+    document.getElementById('add-counter-row').style.display='none';
+    document.getElementById('counter-fg').style.display='none';
+  }
+
+  initApp();
+}
+
+function doLogout(){
+  loggedInUser=''; isAdmin=false;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('entry-section').style.display='none';
+  document.getElementById('add-counter-row').style.display='';
+  document.getElementById('counter-fg').style.display='';
+  document.getElementById('header-user').textContent='—';
+  showTab('entry');
+}
+
+function initApp(){
+  document.getElementById('sel-date').value = today();
+  document.getElementById('hdate').textContent =
+    new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  populateCounterSel();
+
+  // Salesperson: show only their tab options (no admin features)
+  if(!isAdmin){
+    // Salesperson: clear all button aur counter filter hide karo
+    const clearBtn = document.getElementById('clear-all-btn');
+    if(clearBtn) clearBtn.style.display='none';
+    const fCounter = document.getElementById('fCounter');
+    if(fCounter) fCounter.style.display='none';
+  }
+
+  // Login ke baad Google Sheets se latest data load karo
+  loadFromSheets();
+}
+
+window.onload = () => {
+  // App starts at login screen — initApp() called after login
+};
+
+function today(){ return new Date().toISOString().split('T')[0]; }
+function fmt(n){ return (n||0).toLocaleString('en-IN',{maximumFractionDigits:2}); }
+function fmtD(d){ if(!d)return'—'; const[y,m,day]=d.split('-'); return`${day}/${m}/${y}`; }
+
+function addNewCounter(){
+  const inp = document.getElementById('new-counter-inp');
+  const name = inp.value.trim();
+  if(!name){ showToast('Counter naam type karo!','err'); return; }
+  if(COUNTER_ITEMS[name]){ showToast('Yeh counter already exist karta hai!','err'); return; }
+  COUNTER_ITEMS[name] = {};
+  populateCounterSel();
+  document.getElementById('sel-counter').value = name;
+  inp.value = '';
+  showToast(`"${name}" counter add ho gaya! ✅`,'ok');
+}
+
+function populateCounterSel(){
+  const sel=document.getElementById('sel-counter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Select Counter —</option>';
+  Object.keys(COUNTER_ITEMS).sort().forEach(c=>{
+    const o=document.createElement('option');
+    o.value=o.textContent=c;
+    if(c===prev) o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function showTab(tab){
+  ['entry','records','summary'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',['entry','records','summary'][i]===tab);
+  });
+  if(tab==='records'){renderDash();renderRec();populateFilters();}
+  if(tab==='summary') renderSummary();
+}
+
+// ── Build item dropdown (item name only, no rate shown) ──
+function buildItemOpts(counter, selectedItem){
+  let opts='<option value="">— Item Select —</option>';
+  const counterData = COUNTER_ITEMS[counter]||{};
+
+  // Counter specific items first (marked with ★)
+  Object.entries(counterData).forEach(([cat,items])=>{
+    opts+=`<optgroup label="★ ${cat}">`;
+    Object.keys(items).sort().forEach(item=>{
+      const sel=(item===selectedItem)?'selected':'';
+      opts+=`<option value="${item}" data-cat="${cat}" data-rate="${items[item]}" ${sel}>${item}</option>`;
+    });
+    opts+='</optgroup>';
+  });
+
+  // All other items
+  Object.entries(ALL_ITEMS).forEach(([cat,items])=>{
+    const alreadyInCounter=Object.keys(counterData[cat]||{});
+    const remaining=items.filter(i=>!alreadyInCounter.includes(i));
+    if(!remaining.length) return;
+    opts+=`<optgroup label="Other — ${cat}">`;
+    remaining.sort().forEach(item=>{
+      const sel=(item===selectedItem)?'selected':'';
+      opts+=`<option value="${item}" data-cat="${cat}" data-rate="" ${sel}>${item}</option>`;
+    });
+    opts+='</optgroup>';
+  });
+
+  return opts;
+}
+
+function startEntry(){
+  const date=document.getElementById('sel-date').value;
+  // Salesperson ke liye counter fixed rahega
+  const counter = isAdmin ? document.getElementById('sel-counter').value : loggedInUser;
+  const shift=document.getElementById('sel-shift').value;
+  if(!date||!counter||!shift){ showToast('Date aur Shift select karo!','err'); return; }
+
+  currentCounter=counter;
+  document.getElementById('entry-title').textContent=`${counter} — ${shift} — ${fmtD(date)}`;
+  document.getElementById('entry-section').style.display='';
+  document.getElementById('entry-tbody').innerHTML='';
+  rowCount=0;
+
+  const counterData=COUNTER_ITEMS[counter]||{};
+  if(Object.keys(counterData).length>0){
+    Object.entries(counterData).forEach(([cat,items])=>{
+      Object.entries(items).forEach(([item,rate])=>{ addRow(item,cat,rate); });
+    });
+  } else {
+    for(let i=0;i<5;i++) addRow();
+  }
+  document.getElementById('entry-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function addRow(preItem='',preCat='',preRate=''){
+  rowCount++;
+  const id=rowCount;
+  const tbody=document.getElementById('entry-tbody');
+  const tr=document.createElement('tr');
+  tr.id='row-'+id;
+
+  const badgeCls=preCat?(CAT_COLOR[preCat]||'cb-meal'):'';
+  const badgeTxt=preCat||'—';
+  const badgeStyle=preCat?'':`style="background:#EEE;color:#888"`;
+
+  tr.innerHTML=`
+    <td style="color:var(--muted);font-size:11px">${id}</td>
+    <td class="left"><span class="cat-badge ${badgeCls}" id="cbadge-${id}" ${badgeStyle}>${badgeTxt}</span></td>
+    <td class="left" style="min-width:190px;">
+      <select class="row-sel" id="isel-${id}" onchange="onItemChange(${id})">
+        ${buildItemOpts(currentCounter,preItem)}
+      </select>
+      <input type="text" class="row-txt" id="itxt-${id}" placeholder="Custom item type karo..." oninput="onItemType(${id})">
+      <span class="custom-link" onclick="toggleCustom(${id})">✏️ Custom item</span>
+    </td>
+    <td><input class="row-inp" type="number" id="rate-${id}" value="${preRate}" placeholder="₹" oninput="calcRow(${id})"></td>
+    <td><input class="row-inp" type="number" id="stock-${id}" placeholder="—" oninput="calcRow(${id})"></td>
+    <td><input class="row-inp has-val" type="number" id="qty-${id}" placeholder="0" oninput="calcRow(${id})"></td>
+    <td><span class="row-disp amt" id="amt-${id}">—</span></td>
+    <td><input class="row-inp" type="number" id="cash-${id}" placeholder="0" oninput="calcTotals()"></td>
+    <td><input class="row-inp" type="number" id="online-${id}" placeholder="0" oninput="calcTotals()"></td>
+    <td><input class="row-inp" type="number" id="card-${id}" placeholder="0" oninput="calcTotals()"></td>
+    <td><span class="row-disp cls" id="cls-${id}">—</span></td>
+    <td><button class="del-row-btn" onclick="delRow(${id})">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  if(preItem) document.getElementById('isel-'+id).value=preItem;
+  calcRow(id);
+}
+
+function toggleCustom(id){
+  const txt=document.getElementById('itxt-'+id);
+  const sel=document.getElementById('isel-'+id);
+  const isCustom=txt.style.display==='block';
+  txt.style.display=isCustom?'none':'block';
+  sel.style.display=isCustom?'block':'none';
+  document.querySelector(`[onclick="toggleCustom(${id})"]`).textContent=isCustom?'✏️ Custom item':'← Dropdown';
+}
+
+function onItemChange(id){
+  const sel=document.getElementById('isel-'+id);
+  const opt=sel.options[sel.selectedIndex];
+  const cat=opt.getAttribute('data-cat')||'';
+  const rate=opt.getAttribute('data-rate')||'';
+  updateBadge(id,cat);
+  if(rate) document.getElementById('rate-'+id).value=rate;
+  calcRow(id);
+}
+
+function onItemType(id){
+  updateBadge(id,'Meal');
+  calcRow(id);
+}
+
+function updateBadge(id,cat){
+  const badge=document.getElementById('cbadge-'+id);
+  if(cat&&CAT_COLOR[cat]){
+    badge.className='cat-badge '+CAT_COLOR[cat];
+    badge.removeAttribute('style');
+    badge.textContent=cat;
+  } else {
+    badge.className='cat-badge';
+    badge.style='background:#EEE;color:#888';
+    badge.textContent='—';
+  }
+}
+
+function calcRow(id){
+  const rate=parseFloat(document.getElementById('rate-'+id)?.value)||0;
+  const qty=parseFloat(document.getElementById('qty-'+id)?.value)||0;
+  const stock=document.getElementById('stock-'+id)?.value;
+  const amt=qty*rate;
+  const amtEl=document.getElementById('amt-'+id);
+  const clsEl=document.getElementById('cls-'+id);
+  if(amtEl) amtEl.textContent=qty>0?'₹'+fmt(amt):'—';
+  if(clsEl) clsEl.textContent=stock!==''&&stock!==undefined?(parseFloat(stock||0)-qty):'—';
+  calcTotals();
+}
+
+function calcTotals(){
+  let totAmt=0,totQty=0,totCash=0,totOnline=0,totCard=0;
+  document.querySelectorAll('#entry-tbody tr').forEach(tr=>{
+    const id=tr.id.replace('row-','');
+    if(!id) return;
+    const rate=parseFloat(document.getElementById('rate-'+id)?.value)||0;
+    const qty=parseFloat(document.getElementById('qty-'+id)?.value)||0;
+    totAmt+=qty*rate;
+    totQty+=qty;
+    totCash+=parseFloat(document.getElementById('cash-'+id)?.value)||0;
+    totOnline+=parseFloat(document.getElementById('online-'+id)?.value)||0;
+    totCard+=parseFloat(document.getElementById('card-'+id)?.value)||0;
+  });
+  document.getElementById('t-amt').textContent='₹'+fmt(totAmt);
+  document.getElementById('t-qty').textContent=totQty;
+  document.getElementById('t-cash').textContent='₹'+fmt(totCash);
+  document.getElementById('t-online').textContent='₹'+fmt(totOnline);
+  document.getElementById('t-card').textContent='₹'+fmt(totCard);
+}
+
+function delRow(id){
+  const tr=document.getElementById('row-'+id);
+  if(tr){tr.remove();calcTotals();}
+}
+
+function clearRows(){
+  document.querySelectorAll('#entry-tbody tr').forEach(tr=>{
+    const id=tr.id.replace('row-','');
+    if(!id) return;
+    ['qty-','stock-','cash-','online-','card-'].forEach(p=>{
+      const el=document.getElementById(p+id);
+      if(el) el.value='';
+    });
+    // Restore original rate
+    const selEl=document.getElementById('isel-'+id);
+    if(selEl){
+      const opt=selEl.options[selEl.selectedIndex];
+      const r=opt?.getAttribute('data-rate');
+      const rEl=document.getElementById('rate-'+id);
+      if(r&&rEl) rEl.value=r;
+    }
+    const a=document.getElementById('amt-'+id); if(a) a.textContent='—';
+    const c=document.getElementById('cls-'+id); if(c) c.textContent='—';
+  });
+  calcTotals();
+}
+
+function saveAll(){
+  const date=document.getElementById('sel-date').value;
+  const counter=document.getElementById('sel-counter').value;
+  const shift=document.getElementById('sel-shift').value;
+  let saved=0;
+  let newEntries=[];
+
+  document.querySelectorAll('#entry-tbody tr').forEach(tr=>{
+    const id=tr.id.replace('row-','');
+    if(!id) return;
+    const qty=parseFloat(document.getElementById('qty-'+id)?.value)||0;
+    if(qty===0) return;
+
+    const txtEl=document.getElementById('itxt-'+id);
+    const selEl=document.getElementById('isel-'+id);
+    let itemName='',cat='';
+
+    if(txtEl&&txtEl.style.display==='block'&&txtEl.value.trim()){
+      itemName=txtEl.value.trim(); cat='Meal';
+    } else if(selEl&&selEl.value){
+      itemName=selEl.value;
+      const opt=selEl.options[selEl.selectedIndex];
+      cat=opt?.getAttribute('data-cat')||'';
+    }
+    if(!itemName) return;
+
+    const rate=parseFloat(document.getElementById('rate-'+id)?.value)||0;
+    const stockV=document.getElementById('stock-'+id)?.value;
+    const cash=parseFloat(document.getElementById('cash-'+id)?.value)||0;
+    const online=parseFloat(document.getElementById('online-'+id)?.value)||0;
+    const card=parseFloat(document.getElementById('card-'+id)?.value)||0;
+    const stockNum=stockV!==''&&stockV!=null?parseFloat(stockV):null;
+
+    const newEntry = {
+      id:Date.now()+Math.random(),date,
+      counter: isAdmin ? counter : loggedInUser,
+      shift,
+      category:cat,item:itemName,
+      stock:stockNum,qty,rate,amount:qty*rate,
+      cash,online,card,
+      closing:stockNum!==null?stockNum-qty:null
+    };
+    entries.unshift(newEntry);
+    newEntries.push(newEntry);
+    saved++;
+  });
+
+  if(saved===0){showToast('Koi qty nahi bhari!','err');return;}
+  save();
+  showToast('💾 Saving...','');
+  Promise.all(newEntries.map(e=>saveToSheets(e))).then(()=>{
+    showToast(`${saved} entries saved! ✅`,'ok');
+  });
+  clearRows();
+}
+
+function getFiltered(){
+  const s=(document.getElementById('fText')?.value||'').toLowerCase();
+  const c=document.getElementById('fCounter')?.value||'';
+  const d=document.getElementById('fDate')?.value||'';
+  // Salesperson sirf apna counter dekh sakta hai
+  const counterFilter = !isAdmin ? loggedInUser : c;
+  return entries.filter(e=>{
+    const ms=!s||[e.date,e.counter,e.shift,e.category,e.item].some(v=>v&&v.toLowerCase().includes(s));
+    return ms&&(!counterFilter||e.counter===counterFilter)&&(!d||e.date===d);
+  });
+}
+
+function renderDash(){
+  const data=getFiltered();
+  const totAmt=data.reduce((s,e)=>s+e.amount,0);
+  const totQty=data.reduce((s,e)=>s+e.qty,0);
+  const totCash=data.reduce((s,e)=>s+(e.cash||0),0);
+  const totOnline=data.reduce((s,e)=>s+(e.online||0),0);
+  const totCard=data.reduce((s,e)=>s+(e.card||0),0);
+  document.getElementById('dashCards').innerHTML=`
+    <div class="dc"><div class="dl">Total Sales</div><div class="dv">₹${fmt(totAmt)}</div><div class="ds">${data.length} entries</div></div>
+    <div class="dc g"><div class="dl">Total Qty</div><div class="dv">${totQty}</div></div>
+    <div class="dc b"><div class="dl">Total Online</div><div class="dv">₹${fmt(totOnline)}</div></div>
+    <div class="dc p"><div class="dl">Total Cash</div><div class="dv">₹${fmt(totCash)}</div></div>
+    <div class="dc r"><div class="dl">Total Card</div><div class="dv">₹${fmt(totCard)}</div></div>
+  `;
+}
+
+function renderRec(){
+  renderDash();
+  const data=getFiltered();
+  const tbody=document.getElementById('recBody');
+  tbody.innerHTML='';
+  document.getElementById('recEmpty').style.display=data.length?'none':'';
+  data.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    const cb=CAT_COLOR[e.category]||'cb-meal';
+    tr.innerHTML=`
+      <td style="color:var(--muted);font-size:11px">${data.length-i}</td>
+      <td>${fmtD(e.date)}</td>
+      <td style="font-weight:600">${e.counter}</td>
+      <td>${e.shift}</td>
+      <td><span class="cat-badge ${cb}">${e.category||'—'}</span></td>
+      <td style="font-weight:600">${e.item}</td>
+      <td style="text-align:right">${e.stock!=null?e.stock:'—'}</td>
+      <td style="text-align:right;font-weight:700">${e.qty}</td>
+      <td style="text-align:right">₹${e.rate||0}</td>
+      <td style="text-align:right;color:var(--saffron);font-weight:700">₹${fmt(e.amount)}</td>
+      <td style="text-align:right;color:#6C3483">₹${fmt(e.cash||0)}</td>
+      <td style="text-align:right;color:#1A5276">₹${fmt(e.online||0)}</td>
+      <td style="text-align:right;color:#117A65">₹${fmt(e.card||0)}</td>
+      <td style="text-align:right;color:var(--green);font-weight:600">${e.closing!=null?e.closing:'—'}</td>
+      <td><button class="dbtn" onclick="delEntry('${e.id}')">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function populateFilters(){
+  const cSel=document.getElementById('fCounter');
+  const dSel=document.getElementById('fDate');
+  const cv=cSel.value,dv=dSel.value;
+  cSel.innerHTML='<option value="">All Counters</option>';
+  if(isAdmin){
+    [...new Set(entries.map(e=>e.counter))].sort().forEach(c=>{
+      const o=document.createElement('option');
+      o.value=o.textContent=c;
+      if(c===cv)o.selected=true;
+      cSel.appendChild(o);
+    });
+  }
+  dSel.innerHTML='<option value="">All Dates</option>';
+  const relevantEntries = isAdmin ? entries : entries.filter(e=>e.counter===loggedInUser);
+  [...new Set(relevantEntries.map(e=>e.date))].sort().reverse().forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d;o.textContent=fmtD(d);
+    if(d===dv)o.selected=true;
+    dSel.appendChild(o);
+  });
+}
+
+function delEntry(id){
+  entries=entries.filter(e=>String(e.id)!==String(id));
+  save(); renderRec();
+  deleteFromSheets(id);
+  showToast('Deleted');
+}
+function clearAll(){
+  if(!confirm('Saare records delete karo?')) return;
+  entries=[];save();renderRec();renderDash();showToast('Cleared');
+}
+
+function renderSummary(){
+  const entries_f = getFiltered();
+  const totAmt=entries_f.reduce((s,e)=>s+e.amount,0);
+  const totQty=entries_f.reduce((s,e)=>s+e.qty,0);
+  const totCash=entries_f.reduce((s,e)=>s+(e.cash||0),0);
+  const totOnline=entries_f.reduce((s,e)=>s+(e.online||0),0);
+  const totCard=entries_f.reduce((s,e)=>s+(e.card||0),0);
+  document.getElementById('sumDash').innerHTML=`
+    <div class="dc"><div class="dl">Total Revenue</div><div class="dv">₹${fmt(totAmt)}</div></div>
+    <div class="dc g"><div class="dl">Total Qty</div><div class="dv">${totQty}</div></div>
+    <div class="dc b"><div class="dl">Total Online</div><div class="dv">₹${fmt(totOnline)}</div></div>
+    <div class="dc p"><div class="dl">Total Cash</div><div class="dv">₹${fmt(totCash)}</div></div>
+    <div class="dc r"><div class="dl">Total Card</div><div class="dv">₹${fmt(totCard)}</div></div>
+  `;
+  const byC={};
+  entries_f.forEach(e=>{
+    if(!byC[e.counter]) byC[e.counter]={items:{},cash:0,online:0,card:0,total:0};
+    byC[e.counter].items[e.item]=(byC[e.counter].items[e.item]||0)+e.amount;
+    byC[e.counter].cash+=(e.cash||0);
+    byC[e.counter].online+=(e.online||0);
+    byC[e.counter].card+=(e.card||0);
+    byC[e.counter].total+=e.amount;
+  });
+  const grid=document.getElementById('sumGrid');
+  grid.innerHTML='';
+  if(!Object.keys(byC).length){grid.innerHTML='<div class="empty-st">📊 No data yet!</div>';return;}
+  Object.entries(byC).forEach(([c,d])=>{
+    const rows=Object.entries(d.items).sort((a,b)=>b[1]-a[1]);
+    let html=`<div class="sc"><h3>🏪 ${c}</h3>`;
+    rows.forEach(([it,amt])=>{html+=`<div class="sr"><span class="si">${it}</span><span>₹${fmt(amt)}</span></div>`;});
+    html+=`<div class="sr"><span>💰 Total</span><span>₹${fmt(d.total)}</span></div>
+      <div class="sr" style="font-size:11px;font-weight:500;color:#1A5276"><span>📱 Online</span><span>₹${fmt(d.online)}</span></div>
+      <div class="sr" style="font-size:11px;font-weight:500;color:#6C3483"><span>💵 Cash</span><span>₹${fmt(d.cash)}</span></div>
+      <div class="sr" style="font-size:11px;font-weight:500;color:#117A65"><span>💳 Card</span><span>₹${fmt(d.card)}</span></div></div>`;
+    grid.innerHTML+=html;
+  });
+}
+
+function exportExcel(){
+  if(!entries.length){showToast('No data!','err');return;}
+  const data=getFiltered();
+  const rows=data.map((e,i)=>({
+    'Sr':data.length-i,'Date':fmtD(e.date),'Counter':e.counter,'Shift':e.shift,
+    'Category':e.category||'','Item Name':e.item,
+    'Stock':e.stock!=null?e.stock:'','Qty':e.qty,'Rate':e.rate||0,'Amount (₹)':e.amount,
+    'Cash (₹)':e.cash||0,'Online (₹)':e.online||0,'Card (₹)':e.card||0,
+    'Closing':e.closing!=null?e.closing:''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:4},{wch:12},{wch:24},{wch:10},{wch:12},{wch:28},{wch:8},{wch:6},{wch:8},
+    {wch:12},{wch:10},{wch:10},{wch:10},{wch:10}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'All Sales');
+  [...new Set(data.map(e=>e.counter))].forEach(c=>{
+    const cd=data.filter(e=>e.counter===c).map(e=>({
+      'Date':fmtD(e.date),'Shift':e.shift,'Category':e.category||'','Item':e.item,
+      'Stock':e.stock!=null?e.stock:'','Qty':e.qty,'Rate':e.rate||0,'Amount':e.amount,
+      'Cash':e.cash||0,'Online':e.online||0,'Card':e.card||0,'Closing':e.closing!=null?e.closing:''
+    }));
+    const cws=XLSX.utils.json_to_sheet(cd);
+    XLSX.utils.book_append_sheet(wb,cws,c.substring(0,28).replace(/[\/\\?*\[\]:]/g,'_'));
+  });
+  XLSX.writeFile(wb,`FoodKraft_${today()}.xlsx`);
+  showToast('Exported! ✅','ok');
+}
+
+// ══════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// Apps Script: doPost(save/load) + doGet(load)
+// ══════════════════════════════════════════
+const GS_URL = 'https://script.google.com/macros/s/AKfycbwiVUXCkpgyOaBOs5uNru-VUJsvm8PhrkWKrzbnqk5Xvo1NY1yqS0hRyDDNy2g5Z14yPQ/exec';
+
+// Save to localStorage always
+function save(){
+  localStorage.setItem('fk_v5', JSON.stringify(entries));
+}
+
+// Save ALL entries to Google Sheets (full overwrite via POST)
+async function saveToSheets(newEntries){
+  try {
+    // Push all entries (not just new) so sheet stays in sync
+    const payload = {
+      action: 'save',
+      entries: entries.map(e => ({
+        date: e.date,
+        counter: e.counter,
+        shift: e.shift,
+        item: e.item,
+        cat: e.category||'',
+        rate: e.rate||0,
+        qty: e.qty,
+        amount: e.amount,
+        cash: e.cash||0,
+        online: e.online||0,
+        card: e.card||0,
+        ts: e.id
+      }))
+    };
+    await fetch(GS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  } catch(err){
+    console.log('Sheets save error:', err);
+  }
+}
+
+// Load data FROM Google Sheets
+async function loadFromSheets(){
+  showToast('📡 Data load ho raha hai...', '');
+  try {
+    const res = await fetch(GS_URL);
+    const data = await res.json();
+
+    if(data && data.status === 'success' && Array.isArray(data.data) && data.data.length > 1){
+      const rows = data.data;
+      const header = rows[0]; // ['Date','Counter','Shift','Item','Category','Rate','Qty','Amount','Cash','Online','Card','Timestamp']
+      
+      const idx = {
+        date: header.indexOf('Date'),
+        counter: header.indexOf('Counter'),
+        shift: header.indexOf('Shift'),
+        item: header.indexOf('Item'),
+        cat: header.indexOf('Category'),
+        rate: header.indexOf('Rate'),
+        qty: header.indexOf('Qty'),
+        amount: header.indexOf('Amount'),
+        cash: header.indexOf('Cash'),
+        online: header.indexOf('Online'),
+        card: header.indexOf('Card'),
+        ts: header.indexOf('Timestamp')
+      };
+
+      let allEntries = rows.slice(1).filter(r => r[idx.item]).map(r => ({
+        id: r[idx.ts] || (Date.now() + Math.random()),
+        date: r[idx.date] || '',
+        counter: r[idx.counter] || '',
+        shift: r[idx.shift] || '',
+        item: r[idx.item] || '',
+        category: r[idx.cat] || '',
+        rate: parseFloat(r[idx.rate]) || 0,
+        qty: parseFloat(r[idx.qty]) || 0,
+        amount: parseFloat(r[idx.amount]) || 0,
+        cash: parseFloat(r[idx.cash]) || 0,
+        online: parseFloat(r[idx.online]) || 0,
+        card: parseFloat(r[idx.card]) || 0,
+        stock: null,
+        closing: null
+      }));
+
+      // Salesperson sirf apna counter dekhe
+      entries = isAdmin ? allEntries : allEntries.filter(e => e.counter === loggedInUser);
+      save();
+      showToast('✅ Data loaded!', 'ok');
+    } else {
+      // Fallback to localStorage
+      entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
+      if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
+      showToast('📦 Local data use ho raha hai', '');
+    }
+  } catch(err){
+    // Offline fallback
+    entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
+    if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
+    showToast('⚠️ Offline mode — local data', '');
+  }
+}
+
+// Delete = save updated list (sheet me se ek row hata ke re-save)
+async function deleteFromSheets(id){
+  await saveToSheets([]); // entries already updated — just re-save all
+}
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',2800);
+}
+</script>
+</body>
+</html>
