@@ -840,7 +840,8 @@ function saveAll(){
   if(saved===0){showToast('Koi qty nahi bhari!','err');return;}
   save();
   showToast('💾 Saving to Google Sheets...','');
-  saveToSheets().then(()=>{
+  // Har naya entry alag alag append karo
+  Promise.all(newEntries.map(e => saveToSheets(e))).then(()=>{
     showToast(`${saved} entries saved! ✅`,'ok');
   });
   clearRows();
@@ -1008,107 +1009,116 @@ function exportExcel(){
 // GOOGLE SHEETS INTEGRATION
 // Apps Script: doPost(save/load) + doGet(load)
 // ══════════════════════════════════════════
-const GS_URL = 'https://script.google.com/macros/s/AKfycbwiVUXCkpgyOaBOs5uNru-VUJsvm8PhrkWKrzbnqk5Xvo1NY1yqS0hRyDDNy2g5Z14yPQ/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxxC0a_yVJQHzrsY0NUMTYRHzulkF2zoB8xRdDpOKfhlHfw5OEh_zQkUcYFsfqbJWiolA/exec';
 
-// Save to localStorage always
 function save(){
   localStorage.setItem('fk_v5', JSON.stringify(entries));
 }
 
-// Save ALL entries to Google Sheets (full overwrite via POST)
-async function saveToSheets(newEntries){
+// ✅ Sirf NAYA row append karo — overwrite nahi!
+async function saveToSheets(entry){
   try {
-    // Push all entries (not just new) so sheet stays in sync
-    const payload = {
-      action: 'save',
-      entries: entries.map(e => ({
-        date: e.date,
-        counter: e.counter,
-        shift: e.shift,
-        item: e.item,
-        cat: e.category||'',
-        rate: e.rate||0,
-        qty: e.qty,
-        amount: e.amount,
-        cash: e.cash||0,
-        online: e.online||0,
-        card: e.card||0,
-        ts: e.id
-      }))
-    };
     await fetch(GS_URL, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        action: 'addRow',
+        row: {
+          id: String(entry.id),
+          date: entry.date,
+          counter: entry.counter,
+          shift: entry.shift,
+          category: entry.category||'',
+          item: entry.item,
+          stock: entry.stock!=null ? entry.stock : '',
+          qty: entry.qty,
+          rate: entry.rate||0,
+          amount: entry.amount,
+          cash: entry.cash||0,
+          online: entry.online||0,
+          card: entry.card||0,
+          closing: entry.closing!=null ? entry.closing : ''
+        }
+      })
     });
   } catch(err){
-    console.log('Sheets save error:', err);
+    console.log('Save error:', err);
   }
 }
 
-// Load data FROM Google Sheets
+// ✅ Google Sheet se fresh load karo
 async function loadFromSheets(){
   showToast('📡 Data load ho raha hai...', '');
   try {
-    const res = await fetch(GS_URL);
+    const res = await fetch(GS_URL + '?t=' + Date.now());
     const data = await res.json();
 
     if(data && data.status === 'success' && Array.isArray(data.data) && data.data.length > 1){
       const rows = data.data;
-      const header = rows[0]; // ['Date','Counter','Shift','Item','Category','Rate','Qty','Amount','Cash','Online','Card','Timestamp']
-      
-      const idx = {
-        date: header.indexOf('Date'),
-        counter: header.indexOf('Counter'),
-        shift: header.indexOf('Shift'),
-        item: header.indexOf('Item'),
-        cat: header.indexOf('Category'),
-        rate: header.indexOf('Rate'),
-        qty: header.indexOf('Qty'),
-        amount: header.indexOf('Amount'),
-        cash: header.indexOf('Cash'),
-        online: header.indexOf('Online'),
-        card: header.indexOf('Card'),
-        ts: header.indexOf('Timestamp')
+      const h = rows[0].map(x => String(x).trim().toLowerCase());
+
+      const gi = k => {
+        const i = h.indexOf(k);
+        return i >= 0 ? i : null;
       };
 
-      let allEntries = rows.slice(1).filter(r => r[idx.item]).map(r => ({
-        id: r[idx.ts] || (Date.now() + Math.random()),
-        date: r[idx.date] || '',
-        counter: r[idx.counter] || '',
-        shift: r[idx.shift] || '',
-        item: r[idx.item] || '',
-        category: r[idx.cat] || '',
-        rate: parseFloat(r[idx.rate]) || 0,
-        qty: parseFloat(r[idx.qty]) || 0,
-        amount: parseFloat(r[idx.amount]) || 0,
-        cash: parseFloat(r[idx.cash]) || 0,
-        online: parseFloat(r[idx.online]) || 0,
-        card: parseFloat(r[idx.card]) || 0,
-        stock: null,
-        closing: null
-      }));
+      // Column indexes
+      const iId       = gi('id')        ?? 0;
+      const iDate     = gi('date')      ?? 1;
+      const iCounter  = gi('counter')   ?? 2;
+      const iShift    = gi('shift')     ?? 3;
+      const iCat      = gi('category')  ?? 4;
+      const iItem     = gi('item name') ?? 5;
+      const iStock    = gi('stock')     ?? 6;
+      const iQty      = gi('qty')       ?? 7;
+      const iRate     = gi('rate')      ?? 8;
+      const iAmount   = gi('amount')    ?? 9;
+      const iCash     = gi('cash')      ?? 10;
+      const iOnline   = gi('online')    ?? 11;
+      const iCard     = gi('card')      ?? 12;
+      const iClosing  = gi('closing')   ?? 13;
 
-      // Salesperson sirf apna counter dekhe
+      let allEntries = rows.slice(1)
+        .filter(r => r[iItem] && String(r[iItem]).trim() !== '')
+        .map(r => ({
+          id: r[iId] || (Date.now()+Math.random()),
+          date: String(r[iDate]||''),
+          counter: String(r[iCounter]||''),
+          shift: String(r[iShift]||''),
+          category: String(r[iCat]||''),
+          item: String(r[iItem]||''),
+          stock: r[iStock]!==''&&r[iStock]!=null ? parseFloat(r[iStock]) : null,
+          qty: parseFloat(r[iQty])||0,
+          rate: parseFloat(r[iRate])||0,
+          amount: parseFloat(r[iAmount])||0,
+          cash: parseFloat(r[iCash])||0,
+          online: parseFloat(r[iOnline])||0,
+          card: parseFloat(r[iCard])||0,
+          closing: r[iClosing]!==''&&r[iClosing]!=null ? parseFloat(r[iClosing]) : null
+        }));
+
       entries = isAdmin ? allEntries : allEntries.filter(e => e.counter === loggedInUser);
       save();
-      showToast('✅ Data loaded!', 'ok');
+      showToast(`✅ ${entries.length} records loaded!`, 'ok');
     } else {
-      // Fallback to localStorage
-      entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
+      entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
       if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
       showToast('📦 Local data use ho raha hai', '');
     }
   } catch(err){
-    // Offline fallback
-    entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
+    entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
     if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
-    showToast('⚠️ Offline mode — local data', '');
+    showToast('⚠️ Offline mode', '');
   }
 }
 
-// Delete = save updated list (sheet me se ek row hata ke re-save)
+// ✅ Sheet se specific row delete karo
 async function deleteFromSheets(id){
-  await saveToSheets([]); // entries already updated — just re-save all
+  try {
+    await fetch(GS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteRow', id: String(id) })
+    });
+  } catch(e){ console.log('Delete error:', e); }
 }
 
 function showToast(msg,type=''){
