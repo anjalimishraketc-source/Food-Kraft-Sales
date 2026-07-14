@@ -381,8 +381,17 @@ const COUNTER_ITEMS = {
   'Tele Performance': {
     'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
   },
-  'EXL-1': {
-    'Meal': {'Full Thali':80,'Mini Thali':70,'Combo Thali':60,'Biryani':60,'Gulab Jamun':20,'Halwa':20,'Kheer':20}
+  'Tele Performance 2': {
+    'Meal': {'Full Thali':100,'Combo Thali':40,'Extra Veg':10,'Raita':10}
+  },
+  'Ediquity Sector 80': {
+    'Meal': {}
+  },
+  'Ediquity Sector 155': {
+    'Meal': {}
+  },
+  'Scooty': {
+    'Meal': {}
   }
 };
 
@@ -412,71 +421,36 @@ const ALL_ITEMS = {
     'Sweet Lassi','Nimbu Pani','Butter Milk','Lemon Water']
 };
 
+// Default counter names list (custom counters ko identify karne ke liye)
+const DEFAULT_COUNTERS = [
+  'Sector 63','Sector 65','Tele Performance','Tele Performance 2',
+  'Deloitte','Times Of India','Dainik Bhaskar',
+  'Ediquity Sector 80','Ediquity Sector 155',
+  'Jindal','Nucleus','Maruti','Scooty'
+];
+
 const CAT_COLOR={'Meal':'cb-meal','Bakery':'cb-bakery','Sweet':'cb-sweet','MRP Item':'cb-mrp','Beverage':'cb-bev'};
 
-// ── GOOGLE SHEETS SYNC ──
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwdu7RMN8ihyVZoLQtOFhSbBijPj_gQ9KIpNJhtCaSVZU-WVeor4dIHYf1dZWnGVil_og/exec';
-
-async function saveToSheets(entriesToSave){
-  try {
-    await fetch(SHEETS_URL, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action:'save', entries: entriesToSave})
-    });
-    showToast('✅ Google Sheets mein save ho gaya!','ok');
-  } catch(e) {
-    showToast('⚠️ Sheets sync failed, local mein saved hai','err');
-  }
-}
-
-async function loadFromSheets(){
-  try {
-    showToast('📥 Data load ho raha hai...','ok');
-    const res = await fetch(SHEETS_URL);
-    const json = await res.json();
-    if(json.status==='success' && json.data && json.data.length > 1){
-      const rows = json.data.slice(1);
-      const loaded = rows.filter(r=>r[0]).map(r=>({
-        date:String(r[0]), counter:String(r[1]), shift:String(r[2]),
-        item:String(r[3]), cat:String(r[4]), rate:Number(r[5]),
-        qty:Number(r[6]), amount:Number(r[7]),
-        cash:Number(r[8]||0), online:Number(r[9]||0), card:Number(r[10]||0),
-        ts:String(r[11]||'')
-      }));
-      if(loaded.length > 0){
-        entries = loaded;
-        localStorage.setItem('fk_entries', JSON.stringify(entries));
-        renderRecords(); renderSummary();
-        showToast('✅ '+ loaded.length +' records sync ho gaye!','ok');
-      } else {
-        showToast('📋 Sheets mein abhi koi data nahi','ok');
-      }
-    }
-  } catch(e) {
-    showToast('⚠️ Load failed, local data use ho raha hai','err');
-  }
-}
 
 
 // ── USER CREDENTIALS ──
 // username → { counter, password }
 // counter = '__admin__' means full access
 const USERS = {
-  'anjali':         { counter:'__admin__',          password:'foodkraft@admin' },
-  'sec63':          { counter:'Sector 63',           password:'sec63@fk' },
-  'sec65':          { counter:'Sector 65',           password:'sec65@fk' },
-  'jindal':         { counter:'Jindal',              password:'jindal@fk' },
-  'dainik':         { counter:'Dainik Bhaskar',      password:'db@fk' },
-  'deloitte':       { counter:'Deloitte',            password:'del@fk' },
-  'toi':            { counter:'Times Of India',      password:'toi@fk' },
-  'nucleus':        { counter:'Nucleus',             password:'nucleus@fk' },
-  'amazon':         { counter:'Amazon',              password:'amazon@fk' },
-  'maruti':         { counter:'Maruti',              password:'maruti@fk' },
-  'tp1':            { counter:'Tele Performance',    password:'tp1@fk' },
-  'tp2':            { counter:'Tele Performance 2',  password:'tp2@fk' },
-  'giis':           { counter:'Global Indian International School', password:'giis@fk' },
-  'exl1':           { counter:'EXL-1',              password:'exl1@fk' },
+  'anjali':    { counter:'__admin__',                password:'foodkraft@admin' },
+  'sec63':     { counter:'Sector 63',                password:'sec63@fk' },
+  'sec65':     { counter:'Sector 65',                password:'sec65@fk' },
+  'jindal':    { counter:'Jindal',                   password:'jindal@fk' },
+  'dainik':    { counter:'Dainik Bhaskar',           password:'db@fk' },
+  'deloitte':  { counter:'Deloitte',                 password:'del@fk' },
+  'toi':       { counter:'Times Of India',           password:'toi@fk' },
+  'nucleus':   { counter:'Nucleus',                  password:'nucleus@fk' },
+  'maruti':    { counter:'Maruti',                   password:'maruti@fk' },
+  'tp1':       { counter:'Tele Performance',         password:'tp1@fk' },
+  'tp2':       { counter:'Tele Performance 2',       password:'tp2@fk' },
+  'ediq80':    { counter:'Ediquity Sector 80',       password:'ediq80@fk' },
+  'ediq155':   { counter:'Ediquity Sector 155',      password:'ediq155@fk' },
+  'scooty':    { counter:'Scooty',                   password:'scooty@fk' },
 };
 
 let entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
@@ -537,11 +511,14 @@ function initApp(){
   document.getElementById('sel-date').value = today();
   document.getElementById('hdate').textContent =
     new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+  // ✅ LocalStorage se custom counters load karo
+  loadCustomCounters();
+
   populateCounterSel();
 
   // Salesperson: show only their tab options (no admin features)
   if(!isAdmin){
-    // Salesperson: clear all button aur counter filter hide karo
     const clearBtn = document.getElementById('clear-all-btn');
     if(clearBtn) clearBtn.style.display='none';
     const fCounter = document.getElementById('fCounter');
@@ -550,6 +527,30 @@ function initApp(){
 
   // Login ke baad Google Sheets se latest data load karo
   loadFromSheets();
+}
+
+// ✅ Custom counters localStorage me save karo
+function saveCustomCounters(){
+  const custom = {};
+  Object.keys(COUNTER_ITEMS).forEach(c => {
+    // Sirf woh save karo jo default list me nahi hain
+    if(!DEFAULT_COUNTERS.includes(c)){
+      custom[c] = COUNTER_ITEMS[c];
+    }
+  });
+  localStorage.setItem('fk_custom_counters', JSON.stringify(custom));
+}
+
+// ✅ Custom counters localStorage se load karo
+function loadCustomCounters(){
+  try {
+    const saved = JSON.parse(localStorage.getItem('fk_custom_counters') || '{}');
+    Object.entries(saved).forEach(([name, items]) => {
+      if(!COUNTER_ITEMS[name]){
+        COUNTER_ITEMS[name] = items;
+      }
+    });
+  } catch(e){}
 }
 
 window.onload = () => {
@@ -566,6 +567,7 @@ function addNewCounter(){
   if(!name){ showToast('Counter naam type karo!','err'); return; }
   if(COUNTER_ITEMS[name]){ showToast('Yeh counter already exist karta hai!','err'); return; }
   COUNTER_ITEMS[name] = {};
+  saveCustomCounters(); // ✅ localStorage me save karo
   populateCounterSel();
   document.getElementById('sel-counter').value = name;
   inp.value = '';
@@ -584,15 +586,21 @@ function populateCounterSel(){
   });
 }
 
-function showTab(tab){
+async function showTab(tab){
   ['entry','records','summary'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
   });
   document.querySelectorAll('.tab').forEach((el,i)=>{
     el.classList.toggle('active',['entry','records','summary'][i]===tab);
   });
-  if(tab==='records'){renderDash();renderRec();populateFilters();}
-  if(tab==='summary') renderSummary();
+  if(tab==='records'){
+    await loadFromSheets();
+    renderDash();renderRec();populateFilters();
+  }
+  if(tab==='summary'){
+    await loadFromSheets();
+    renderSummary();
+  }
 }
 
 // ── Build item dropdown (item name only, no rate shown) ──
@@ -831,8 +839,8 @@ function saveAll(){
 
   if(saved===0){showToast('Koi qty nahi bhari!','err');return;}
   save();
-  showToast('💾 Saving...','');
-  Promise.all(newEntries.map(e=>saveToSheets(e))).then(()=>{
+  showToast('💾 Saving to Google Sheets...','');
+  saveToSheets().then(()=>{
     showToast(`${saved} entries saved! ✅`,'ok');
   });
   clearRows();
