@@ -1009,7 +1009,7 @@ function exportExcel(){
 // GOOGLE SHEETS INTEGRATION
 // Apps Script: doPost(save/load) + doGet(load)
 // ══════════════════════════════════════════
-const GS_URL = 'https://script.google.com/macros/s/AKfycbxxC0a_yVJQHzrsY0NUMTYRHzulkF2zoB8xRdDpOKfhlHfw5OEh_zQkUcYFsfqbJWiolA/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbydgfdI5ysL8yS7Gdob44fvtQIFUhCEWlweHj4qzXL9TgyR2-5QV-ToHhmr5nNV90PE/exec';
 
 function save(){
   localStorage.setItem('fk_v5', JSON.stringify(entries));
@@ -1056,47 +1056,41 @@ async function loadFromSheets(){
       const rows = data.data;
       const h = rows[0].map(x => String(x).trim().toLowerCase());
 
-      const gi = k => {
-        const i = h.indexOf(k);
-        return i >= 0 ? i : null;
-      };
-
-      // Column indexes
-      const iId       = gi('id')        ?? 0;
-      const iDate     = gi('date')      ?? 1;
-      const iCounter  = gi('counter')   ?? 2;
-      const iShift    = gi('shift')     ?? 3;
-      const iCat      = gi('category')  ?? 4;
-      const iItem     = gi('item name') ?? 5;
-      const iStock    = gi('stock')     ?? 6;
-      const iQty      = gi('qty')       ?? 7;
-      const iRate     = gi('rate')      ?? 8;
-      const iAmount   = gi('amount')    ?? 9;
-      const iCash     = gi('cash')      ?? 10;
-      const iOnline   = gi('online')    ?? 11;
-      const iCard     = gi('card')      ?? 12;
-      const iClosing  = gi('closing')   ?? 13;
+      // Exact sheet headers:
+      // Date | Counter | Shift | Category | Item Name | Rate | Qty | Amount | Cash | Online | Card | Timestamp
+      const iDate      = h.indexOf('date')      >= 0 ? h.indexOf('date')      : 0;
+      const iCounter   = h.indexOf('counter')   >= 0 ? h.indexOf('counter')   : 1;
+      const iShift     = h.indexOf('shift')     >= 0 ? h.indexOf('shift')     : 2;
+      const iCat       = h.indexOf('category')  >= 0 ? h.indexOf('category')  : 3;
+      const iItem      = h.indexOf('item name') >= 0 ? h.indexOf('item name') : 4;
+      const iRate      = h.indexOf('rate')      >= 0 ? h.indexOf('rate')      : 5;
+      const iQty       = h.indexOf('qty')       >= 0 ? h.indexOf('qty')       : 6;
+      const iAmount    = h.indexOf('amount')    >= 0 ? h.indexOf('amount')    : 7;
+      const iCash      = h.indexOf('cash')      >= 0 ? h.indexOf('cash')      : 8;
+      const iOnline    = h.indexOf('online')    >= 0 ? h.indexOf('online')    : 9;
+      const iCard      = h.indexOf('card')      >= 0 ? h.indexOf('card')      : 10;
+      const iTs        = h.indexOf('timestamp') >= 0 ? h.indexOf('timestamp') : 11;
 
       let allEntries = rows.slice(1)
         .filter(r => r[iItem] && String(r[iItem]).trim() !== '')
         .map(r => ({
-          id: r[iId] || (Date.now()+Math.random()),
+          id: r[iTs] || (Date.now()+Math.random()),
           date: String(r[iDate]||''),
           counter: String(r[iCounter]||''),
           shift: String(r[iShift]||''),
           category: String(r[iCat]||''),
           item: String(r[iItem]||''),
-          stock: r[iStock]!==''&&r[iStock]!=null ? parseFloat(r[iStock]) : null,
+          stock: null,
           qty: parseFloat(r[iQty])||0,
           rate: parseFloat(r[iRate])||0,
           amount: parseFloat(r[iAmount])||0,
           cash: parseFloat(r[iCash])||0,
           online: parseFloat(r[iOnline])||0,
           card: parseFloat(r[iCard])||0,
-          closing: r[iClosing]!==''&&r[iClosing]!=null ? parseFloat(r[iClosing]) : null
+          closing: null
         }));
 
-      entries = isAdmin ? allEntries : allEntries.filter(e => 
+      entries = isAdmin ? allEntries : allEntries.filter(e =>
         e.counter.trim().toLowerCase() === loggedInUser.trim().toLowerCase()
       );
       save();
