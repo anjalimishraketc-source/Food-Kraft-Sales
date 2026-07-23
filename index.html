@@ -263,10 +263,27 @@ main{max-width:1300px;margin:0 auto;padding:16px 12px;}
       <h3>📋 All Sales Records</h3>
       <div class="tbar-r">
         <input class="fi" id="fText" placeholder="🔍 Search..." oninput="renderRec()">
-        <select class="fi" id="fCounter" onchange="renderRec()" style="width:160px;"><option value="">All Counters</option></select>
-        <select class="fi" id="fDate" onchange="renderRec()" style="width:130px;"><option value="">All Dates</option></select>
+        <select class="fi" id="fCounter" onchange="renderRec()" style="width:155px;"><option value="">All Counters</option></select>
+
+        <!-- Date Filter -->
+        <select class="fi" id="fDateType" onchange="onDateTypeChange()" style="width:140px;">
+          <option value="">All Dates</option>
+          <option value="today">📅 Aaj</option>
+          <option value="yesterday">📅 Kal</option>
+          <option value="week">📅 Is Hafte</option>
+          <option value="month">📅 Is Mahine</option>
+          <option value="single">📅 Ek Date</option>
+          <option value="range">📅 Date Range</option>
+        </select>
+
+        <!-- Single date picker -->
+        <input type="date" class="fi" id="fSingleDate" style="display:none;width:145px;" onchange="renderRec()">
+
+        <!-- Range date pickers -->
+        <input type="date" class="fi" id="fDateFrom" style="display:none;width:135px;" onchange="renderRec()" placeholder="From">
+        <input type="date" class="fi" id="fDateTo" style="display:none;width:135px;" onchange="renderRec()" placeholder="To">
+
         <button class="btn btn-green btn-sm" onclick="exportExcel()">⬇️ Excel</button>
-        <button class="btn btn-danger btn-sm" id="clear-all-btn" onclick="clearAll()">🗑️ Clear</button>
       </div>
     </div>
     <div class="rec-wrap">
@@ -312,8 +329,19 @@ const COUNTER_ITEMS = {
     'MRP Item': {
       'Kitkat':10,'Munch':10,'5 Star Chocolate':10,
       'Biscuit 10':10,'Biscuit 15':15,'Biscuit 20':20,'Biscuit 25':25,'Biscuit 30':30,
-      'Chips 10':10,'Chips 20':20,'Chips 35':35,
+      'Chips 20':20,'Chips 35':35,
       'Cold Drink 10':10,'Cold Drink 20':20,'Cold Drink 40':40
+    },
+    'Meal': {
+      'Plain Maggi':30,'Veg Maggi':35,'Cheese Maggi':50,'Corn Maggi':50,'Egg Maggi':50,
+      'Omlatte':30,'Bread Omlatte':40,'Cheese Omlatte':50,
+      'Veg Sandwich':40,'Spicy Paneer Sandwich':45,'Sprout Sandwich':40,'Tandoori Paneer Corn':45,
+      'Red Sauce Pasta':60,'Mix Sauce Pasta':60,
+      'Masala Idli':40,'Poha':60,'Mutter Kulcha':50,'Upma':50,
+      'Samosa':20,'Paneer Bread Pakoda':25,'Paneer Kulcha':50,
+      'Tea/Coffee':20,'Cold Coffee':45,'Sweet Lassi':50,'Salt Lassi':50,'Lemon Water':20,
+      'Veg Thali':90,'Veg Combo':60,'Non Veg Thali':120,'Non Veg Combo':90,
+      'Sweet':15,'Sprout':40,'Fruits':50,'Corn Chaat':50,'Bun Maska':25
     }
   },
   'Global Indian International School': {
@@ -840,22 +868,113 @@ function saveAll(){
   if(saved===0){showToast('Koi qty nahi bhari!','err');return;}
   save();
   showToast('💾 Saving to Google Sheets...','');
-  saveToSheets().then(()=>{
+  // Har naya entry alag alag append karo
+  Promise.all(newEntries.map(e => saveToSheets(e))).then(()=>{
     showToast(`${saved} entries saved! ✅`,'ok');
   });
   clearRows();
 }
 
+function onDateTypeChange(){
+  const type = document.getElementById('fDateType')?.value||'';
+  document.getElementById('fSingleDate').style.display = type==='single'?'':'none';
+  document.getElementById('fDateFrom').style.display = type==='range'?'':'none';
+  document.getElementById('fDateTo').style.display = type==='range'?'':'none';
+  renderRec();
+}
+
+function getDateRange(){
+  const type = document.getElementById('fDateType')?.value||'';
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt2 = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const todayStr = fmt2(now);
+  if(type==='') return {from:'',to:''};
+  if(type==='today') return {from:todayStr,to:todayStr};
+  if(type==='yesterday'){
+    const y=new Date(now); y.setDate(y.getDate()-1);
+    return {from:fmt2(y),to:fmt2(y)};
+  }
+  if(type==='week'){
+    const day=now.getDay();
+    const mon=new Date(now); mon.setDate(now.getDate()-(day===0?6:day-1));
+    return {from:fmt2(mon),to:todayStr};
+  }
+  if(type==='month'){
+    const mon=new Date(now.getFullYear(),now.getMonth(),1);
+    return {from:fmt2(mon),to:todayStr};
+  }
+  if(type==='single'){
+    const d=document.getElementById('fSingleDate')?.value||'';
+    return {from:d,to:d};
+  }
+  if(type==='range'){
+    return {
+      from:document.getElementById('fDateFrom')?.value||'',
+      to:document.getElementById('fDateTo')?.value||''
+    };
+  }
+  return {from:'',to:''};
+}
+
+// Date ko YYYY-MM-DD format me convert karo (DD/MM/YYYY ya YYYY-MM-DD dono handle)
+function normalizeDate(d){
+  if(!d) return '';
+  d = String(d).trim();
+  // Already YYYY-MM-DD format
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // DD/MM/YYYY format
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(d)){
+    const [day,mon,yr] = d.split('/');
+    return `${yr}-${mon}-${day}`;
+  }
+  // DD-MM-YYYY format
+  if(/^\d{2}-\d{2}-\d{4}$/.test(d)){
+    const [day,mon,yr] = d.split('-');
+    return `${yr}-${mon}-${day}`;
+  }
+  // Try parse karo
+  try {
+    const dt = new Date(d);
+    if(!isNaN(dt)){
+      const pad = n => String(n).padStart(2,'0');
+      return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+    }
+  } catch(e){}
+  return d;
+}
+
 function getFiltered(){
   const s=(document.getElementById('fText')?.value||'').toLowerCase();
   const c=document.getElementById('fCounter')?.value||'';
-  const d=document.getElementById('fDate')?.value||'';
-  // Salesperson sirf apna counter dekh sakta hai
-  const counterFilter = !isAdmin ? loggedInUser : c;
+  const counterFilter=!isAdmin?loggedInUser.trim().toLowerCase():c.toLowerCase();
+  const {from,to}=getDateRange();
   return entries.filter(e=>{
     const ms=!s||[e.date,e.counter,e.shift,e.category,e.item].some(v=>v&&v.toLowerCase().includes(s));
-    return ms&&(!counterFilter||e.counter===counterFilter)&&(!d||e.date===d);
+    const mc=!counterFilter||e.counter.trim().toLowerCase()===counterFilter;
+    let md=true;
+    if(from||to){
+      const eDate = normalizeDate(e.date);
+      if(from&&to) md=eDate>=from&&eDate<=to;
+      else if(from) md=eDate>=from;
+      else if(to) md=eDate<=to;
+    }
+    return ms&&mc&&md;
   });
+}
+
+function populateFilters(){
+  const cSel=document.getElementById('fCounter');
+  const cv=cSel.value;
+  cSel.innerHTML='<option value="">All Counters</option>';
+  if(isAdmin){
+    [...new Set(entries.map(e=>e.counter))].sort().forEach(c=>{
+      const o=document.createElement('option');
+      o.value=o.textContent=c;
+      if(c===cv)o.selected=true;
+      cSel.appendChild(o);
+    });
+  }
 }
 
 function renderDash(){
@@ -904,29 +1023,6 @@ function renderRec(){
   });
 }
 
-function populateFilters(){
-  const cSel=document.getElementById('fCounter');
-  const dSel=document.getElementById('fDate');
-  const cv=cSel.value,dv=dSel.value;
-  cSel.innerHTML='<option value="">All Counters</option>';
-  if(isAdmin){
-    [...new Set(entries.map(e=>e.counter))].sort().forEach(c=>{
-      const o=document.createElement('option');
-      o.value=o.textContent=c;
-      if(c===cv)o.selected=true;
-      cSel.appendChild(o);
-    });
-  }
-  dSel.innerHTML='<option value="">All Dates</option>';
-  const relevantEntries = isAdmin ? entries : entries.filter(e=>e.counter===loggedInUser);
-  [...new Set(relevantEntries.map(e=>e.date))].sort().reverse().forEach(d=>{
-    const o=document.createElement('option');
-    o.value=d;o.textContent=fmtD(d);
-    if(d===dv)o.selected=true;
-    dSel.appendChild(o);
-  });
-}
-
 function delEntry(id){
   entries=entries.filter(e=>String(e.id)!==String(id));
   save(); renderRec();
@@ -934,8 +1030,19 @@ function delEntry(id){
   showToast('Deleted');
 }
 function clearAll(){
-  if(!confirm('Saare records delete karo?')) return;
-  entries=[];save();renderRec();renderDash();showToast('Cleared');
+  if(!isAdmin){ showToast('Sirf Admin clear kar sakta hai!','err'); return; }
+  if(!confirm('⚠️ SAAVDHAN!\n\nYeh APPLICATION aur GOOGLE SHEET dono se saara data delete kar dega!\n\nKya aap sure hain?')) return;
+  if(!confirm('Dobara confirm karo — Kya PERMANENTLY delete karna hai?')) return;
+  // Delete each entry from Google Sheets
+  showToast('🗑️ Deleting...','');
+  const toDelete = [...entries];
+  Promise.all(toDelete.map(e => deleteFromSheets(e.id))).then(()=>{
+    entries=[];
+    save();
+    renderRec();
+    renderDash();
+    showToast('✅ Saara data delete ho gaya!','ok');
+  });
 }
 
 function renderSummary(){
@@ -979,10 +1086,26 @@ function renderSummary(){
 function exportExcel(){
   if(!entries.length){showToast('No data!','err');return;}
   const data=getFiltered();
+  if(!data.length){showToast('Is filter me koi data nahi!','err');return;}
+
+  // Date ko DD/MM/YYYY format me dikhao
+  const getDate = (d) => {
+    if(!d) return '';
+    const nd = normalizeDate(String(d));
+    if(/^\d{4}-\d{2}-\d{2}$/.test(nd)){
+      const [y,m,day] = nd.split('-');
+      return `${day}/${m}/${y}`;
+    }
+    return String(d);
+  };
+
   const rows=data.map((e,i)=>({
-    'Sr':data.length-i,'Date':fmtD(e.date),'Counter':e.counter,'Shift':e.shift,
+    'Sr':data.length-i,
+    'Date': getDate(e.date),
+    'Counter':e.counter,'Shift':e.shift,
     'Category':e.category||'','Item Name':e.item,
-    'Stock':e.stock!=null?e.stock:'','Qty':e.qty,'Rate':e.rate||0,'Amount (₹)':e.amount,
+    'Stock':e.stock!=null?e.stock:'',
+    'Qty':e.qty,'Rate':e.rate||0,'Amount (₹)':e.amount,
     'Cash (₹)':e.cash||0,'Online (₹)':e.online||0,'Card (₹)':e.card||0,
     'Closing':e.closing!=null?e.closing:''
   }));
@@ -993,9 +1116,10 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb,ws,'All Sales');
   [...new Set(data.map(e=>e.counter))].forEach(c=>{
     const cd=data.filter(e=>e.counter===c).map(e=>({
-      'Date':fmtD(e.date),'Shift':e.shift,'Category':e.category||'','Item':e.item,
+      'Date':getDate(e.date),'Shift':e.shift,'Category':e.category||'','Item':e.item,
       'Stock':e.stock!=null?e.stock:'','Qty':e.qty,'Rate':e.rate||0,'Amount':e.amount,
-      'Cash':e.cash||0,'Online':e.online||0,'Card':e.card||0,'Closing':e.closing!=null?e.closing:''
+      'Cash':e.cash||0,'Online':e.online||0,'Card':e.card||0,
+      'Closing':e.closing!=null?e.closing:''
     }));
     const cws=XLSX.utils.json_to_sheet(cd);
     XLSX.utils.book_append_sheet(wb,cws,c.substring(0,28).replace(/[\/\\?*\[\]:]/g,'_'));
@@ -1008,107 +1132,120 @@ function exportExcel(){
 // GOOGLE SHEETS INTEGRATION
 // Apps Script: doPost(save/load) + doGet(load)
 // ══════════════════════════════════════════
-const GS_URL = 'https://script.google.com/macros/s/AKfycbwiVUXCkpgyOaBOs5uNru-VUJsvm8PhrkWKrzbnqk5Xvo1NY1yqS0hRyDDNy2g5Z14yPQ/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbydgfdI5ysL8yS7Gdob44fvtQIFUhCEWlweHj4qzXL9TgyR2-5QV-ToHhmr5nNV90PE/exec';
 
-// Save to localStorage always
 function save(){
   localStorage.setItem('fk_v5', JSON.stringify(entries));
 }
 
-// Save ALL entries to Google Sheets (full overwrite via POST)
-async function saveToSheets(newEntries){
+// ✅ Sirf NAYA row append karo — overwrite nahi!
+async function saveToSheets(entry){
   try {
-    // Push all entries (not just new) so sheet stays in sync
-    const payload = {
-      action: 'save',
-      entries: entries.map(e => ({
-        date: e.date,
-        counter: e.counter,
-        shift: e.shift,
-        item: e.item,
-        cat: e.category||'',
-        rate: e.rate||0,
-        qty: e.qty,
-        amount: e.amount,
-        cash: e.cash||0,
-        online: e.online||0,
-        card: e.card||0,
-        ts: e.id
-      }))
-    };
     await fetch(GS_URL, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        action: 'addRow',
+        row: {
+          id: String(entry.id),
+          date: entry.date,
+          counter: entry.counter,
+          shift: entry.shift,
+          category: entry.category||'',
+          item: entry.item,
+          stock: entry.stock!=null ? entry.stock : '',
+          qty: entry.qty,
+          rate: entry.rate||0,
+          amount: entry.amount,
+          cash: entry.cash||0,
+          online: entry.online||0,
+          card: entry.card||0,
+          closing: entry.closing!=null ? entry.closing : ''
+        }
+      })
     });
   } catch(err){
-    console.log('Sheets save error:', err);
+    console.log('Save error:', err);
   }
 }
 
-// Load data FROM Google Sheets
+// ✅ Google Sheet se fresh load karo
 async function loadFromSheets(){
   showToast('📡 Data load ho raha hai...', '');
   try {
-    const res = await fetch(GS_URL);
+    const res = await fetch(GS_URL + '?t=' + Date.now());
     const data = await res.json();
 
     if(data && data.status === 'success' && Array.isArray(data.data) && data.data.length > 1){
       const rows = data.data;
-      const header = rows[0]; // ['Date','Counter','Shift','Item','Category','Rate','Qty','Amount','Cash','Online','Card','Timestamp']
-      
-      const idx = {
-        date: header.indexOf('Date'),
-        counter: header.indexOf('Counter'),
-        shift: header.indexOf('Shift'),
-        item: header.indexOf('Item'),
-        cat: header.indexOf('Category'),
-        rate: header.indexOf('Rate'),
-        qty: header.indexOf('Qty'),
-        amount: header.indexOf('Amount'),
-        cash: header.indexOf('Cash'),
-        online: header.indexOf('Online'),
-        card: header.indexOf('Card'),
-        ts: header.indexOf('Timestamp')
-      };
+      const h = rows[0].map(x => String(x).trim().toLowerCase());
 
-      let allEntries = rows.slice(1).filter(r => r[idx.item]).map(r => ({
-        id: r[idx.ts] || (Date.now() + Math.random()),
-        date: r[idx.date] || '',
-        counter: r[idx.counter] || '',
-        shift: r[idx.shift] || '',
-        item: r[idx.item] || '',
-        category: r[idx.cat] || '',
-        rate: parseFloat(r[idx.rate]) || 0,
-        qty: parseFloat(r[idx.qty]) || 0,
-        amount: parseFloat(r[idx.amount]) || 0,
-        cash: parseFloat(r[idx.cash]) || 0,
-        online: parseFloat(r[idx.online]) || 0,
-        card: parseFloat(r[idx.card]) || 0,
-        stock: null,
-        closing: null
-      }));
+      // Exact sheet headers:
+      // Date | Counter | Shift | Category | Item Name | Rate | Qty | Amount | Cash | Online | Card | Timestamp
+      const iDate      = h.indexOf('date')      >= 0 ? h.indexOf('date')      : 0;
+      const iCounter   = h.indexOf('counter')   >= 0 ? h.indexOf('counter')   : 1;
+      const iShift     = h.indexOf('shift')     >= 0 ? h.indexOf('shift')     : 2;
+      const iCat       = h.indexOf('category')  >= 0 ? h.indexOf('category')  : 3;
+      const iItem      = h.indexOf('item name') >= 0 ? h.indexOf('item name') : 4;
+      const iRate      = h.indexOf('rate')      >= 0 ? h.indexOf('rate')      : 5;
+      const iQty       = h.indexOf('qty')       >= 0 ? h.indexOf('qty')       : 6;
+      const iAmount    = h.indexOf('amount')    >= 0 ? h.indexOf('amount')    : 7;
+      const iCash      = h.indexOf('cash')      >= 0 ? h.indexOf('cash')      : 8;
+      const iOnline    = h.indexOf('online')    >= 0 ? h.indexOf('online')    : 9;
+      const iCard      = h.indexOf('card')      >= 0 ? h.indexOf('card')      : 10;
+      const iTs        = h.indexOf('timestamp') >= 0 ? h.indexOf('timestamp') : 11;
 
-      // Salesperson sirf apna counter dekhe
-      entries = isAdmin ? allEntries : allEntries.filter(e => e.counter === loggedInUser);
+      let allEntries = rows.slice(1)
+        .filter(r => r[iItem] && String(r[iItem]).trim() !== '')
+        .map(r => ({
+          id: r[iTs] || (Date.now()+Math.random()),
+          date: String(r[iDate]||''),
+          counter: String(r[iCounter]||''),
+          shift: String(r[iShift]||''),
+          category: String(r[iCat]||''),
+          item: String(r[iItem]||''),
+          stock: null,
+          qty: parseFloat(r[iQty])||0,
+          rate: parseFloat(r[iRate])||0,
+          amount: parseFloat(r[iAmount])||0,
+          cash: parseFloat(r[iCash])||0,
+          online: parseFloat(r[iOnline])||0,
+          card: parseFloat(r[iCard])||0,
+          closing: null
+        }));
+
+      entries = isAdmin ? allEntries : allEntries.filter(e =>
+        e.counter.trim().toLowerCase() === loggedInUser.trim().toLowerCase()
+      );
       save();
-      showToast('✅ Data loaded!', 'ok');
+      if(entries.length === 0 && !isAdmin){
+        showToast('⚠️ Aapke counter ka koi data nahi mila', '');
+      } else {
+        showToast(`✅ ${entries.length} records loaded!`, 'ok');
+      }
     } else {
-      // Fallback to localStorage
-      entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
-      if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
+      entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
+      if(!isAdmin) entries = entries.filter(e => 
+        e.counter.trim().toLowerCase() === loggedInUser.trim().toLowerCase()
+      );
       showToast('📦 Local data use ho raha hai', '');
     }
   } catch(err){
-    // Offline fallback
-    entries = JSON.parse(localStorage.getItem('fk_v5') || '[]');
-    if(!isAdmin) entries = entries.filter(e => e.counter === loggedInUser);
-    showToast('⚠️ Offline mode — local data', '');
+    entries = JSON.parse(localStorage.getItem('fk_v5')||'[]');
+    if(!isAdmin) entries = entries.filter(e => 
+      e.counter.trim().toLowerCase() === loggedInUser.trim().toLowerCase()
+    );
+    showToast('⚠️ Offline mode', '');
   }
 }
 
-// Delete = save updated list (sheet me se ek row hata ke re-save)
+// ✅ Sheet se specific row delete karo
 async function deleteFromSheets(id){
-  await saveToSheets([]); // entries already updated — just re-save all
+  try {
+    await fetch(GS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteRow', id: String(id) })
+    });
+  } catch(e){ console.log('Delete error:', e); }
 }
 
 function showToast(msg,type=''){
